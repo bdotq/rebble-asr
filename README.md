@@ -54,7 +54,9 @@ In Google Cloud Shell terminal
  
   Navigate to the image digests that you just pushed [ YOURREGIION-docker.pkg.dev > YOUR_REPO > rebble-asr > dictation ]
   
-  Click on the most recent,  Then click Deploy > Deploy on Cloud Run. Defaults will be fine
+  Click on the most recent,  Then click Deploy > Deploy on Cloud Run. 
+  
+  Set port to be 443 and the rest of defaults will be fine
   
   After server is up running, you can use that is URL created (eg. https://dictation-########.a.run.app)
   
