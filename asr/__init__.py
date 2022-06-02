@@ -14,9 +14,9 @@ from flask import Flask, request, Response, abort
 
 app = Flask(__name__)
 
-AUTH_URL = "https://auth.rebble.io"
-API_KEY = os.environ['SPEECH_API_KEY']
-
+AUTH_URL = "0.0.0.0" #server to check for paid user
+API_KEY = os.environ['SPEECH_API_KEY'] #not used by google anymore
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
 
 # We know gunicorn does this, but it doesn't *say* it does this, so we must signal it manually.
 @app.before_request
@@ -55,9 +55,10 @@ def recognise():
 
     access_token, lang = request.host.split('.', 1)[0].split('-', 1)
 
-    auth_req = requests.get(f"{AUTH_URL}/api/v1/me/token", headers={'Authorization': f"Bearer {access_token}"})
-    if not auth_req.ok:
-        abort(401)
+# MAKE FREE
+#     auth_req = requests.get(f"{AUTH_URL}/api/v1/me/token", headers={'Authorization': f"Bearer {access_token}"})
+#     if not auth_req.ok:
+#         abort(401)
 
     chunks = iter(list(parse_chunks(stream)))
     content = next(chunks).decode('utf-8')
@@ -78,7 +79,9 @@ def recognise():
             'content': base64.b64encode(b''.join((struct.pack('B', len(x)) + x for x in chunks))).decode('utf-8'),
         },
     }
-    result = requests.post(f'https://speech.googleapis.com/v1/speech:recognize?key={API_KEY}', json=body)
+    #old API_KEY version
+    #result = requests.post(f'https://speech.googleapis.com/v1/speech:recognize?key={API_KEY}', json=body)
+    result = requests.post(f'https://speech.googleapis.com/v1/speech:recognize', json=body)
     result.raise_for_status()
 
     words = []
