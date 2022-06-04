@@ -9,44 +9,42 @@ asr.rebble.io: speech recognition for rebble
  
  Enable the Cloud Speech-to-Text API for that project.
  
- Create a service account.
+ Create a service account. Set its permissions role only for Speech-to-Text
  
  Download a private key as JSON. Save it as `key.json`
  
 
-## setup Google Cloud Platform: Artifact Registry, Cloud Run
+## Setup Google Cloud Platform: Artifact Registry, Cloud Run
 
  Enable Artifact Registry and Cloud Run
  
- In Artifact Registry create a new repository
+ In Artifact Registry create a new repository. Set up the region and note it.
  
  Set as Docker, choose a region, create repository
 
-## build & deploy
+## Build & Deploy
 
-In Google Cloud Shell terminal
+In Google Cloud Shell Terminal and Editor
 
   `git clone https://github.com/bdotq/rebble-asr`
 
   `cd rebble-asr`
 
-  in `Dockerfile` change `$PORT` to `443`
+  in `Dockerfile` change `$PORT` to `443` if not already set
 
   upload `key.json` to the `asr` folder
 
-  in `asr/__init__.py` API_KEY no longer used, but `GOOGLE_APPLICATION_CREDENTIALS` will refer to key.json
-
-  `auth_req` around line 58 has been commented out, needed to authenticate the user for the rebble.io service, but no needed for this
+  in `asr/__init__.py` change `lang="en-US"` to whatever language locale you wish to use. `API_KEY` is no longer used, SpeechClient will now refer to key.json.  `auth_req` around line 58 has been commented out, its used to authenticate the user for the rebble.io service, but not needed for this
 
   `cd ..`
   
   `docker build -t dictation .`
   
- With the repository you creted with the region in Artifact Registry, modify the following command (where `rebble-asr` is your project name)
+ With the REPOSITORY NAME you created in the REGION on Artifact Registry, modify the following command (where `rebble-asr` is your Google cloud project name):
   
   `docker tag dictation YOURREGIION-docker.pkg.dev/YOUR_REPO/rebble-asr/dictation`
  
- Then push to Artifact Registry:
+ Then push to Artifact Registry, similarily modifying this command:
  
   `docker push YOURREGIION-docker.pkg.dev/YOUR_REPO/rebble-asr/dictation`
   
@@ -60,7 +58,10 @@ In Google Cloud Shell terminal
   
   After server is up running, you can use that is URL created (eg. https://dictation-########.a.run.app)
   
+  (Can also deploy with command `gcloud run deploy dictation --image YOURREGIION-docker.pkg.dev/YOUR_REPO/rebble-asr/dictation:latest`)
   
+## Use with Pebble
+
   Log into [auth.rebble.io/account](https://auth.rebble.io/account/)
   
   Under "Experimental Features for Developers", click 'I know what I'm doing'
