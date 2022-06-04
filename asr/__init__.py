@@ -8,15 +8,16 @@ from email.message import Message
 import json
 import struct
 import os
-
 import requests
 from flask import Flask, request, Response, abort
+from google.cloud import speech
 
 app = Flask(__name__)
 
-AUTH_URL = "0.0.0.0" #server to check for paid user
-API_KEY = os.environ['SPEECH_API_KEY'] #not used by google anymore
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
+#define your language locale
+lang = "en-US"
+#AUTH_URL = "0.0.0.0" #server to check for paid user
+#API_KEY = os.environ['SPEECH_API_KEY'] #not used by google anymore
 
 # We know gunicorn does this, but it doesn't *say* it does this, so we must signal it manually.
 @app.before_request
@@ -52,8 +53,9 @@ def heartbeat():
 @app.route('/NmspServlet/', methods=["POST"])
 def recognise():
     stream = request.stream
-
-    access_token, lang = request.host.split('.', 1)[0].split('-', 1)
+    
+#no auth and lang was only pulled from the nuance server hostname
+    #access_token, lang = request.host.split('.', 1)[0].split('-', 1)
 
 # MAKE FREE
 #     auth_req = requests.get(f"{AUTH_URL}/api/v1/me/token", headers={'Authorization': f"Bearer {access_token}"})
@@ -63,34 +65,35 @@ def recognise():
     chunks = iter(list(parse_chunks(stream)))
     content = next(chunks).decode('utf-8')
 
-    body = {
-        'config': {
-            'encoding': 'SPEEX_WITH_HEADER_BYTE',
-            'language_code': lang,
-            'sample_rate_hertz': 16000,
-            'max_alternatives': 1,
-            'enableAutomaticPunctuation': True,
-            # 'metadata': {
-            #     'interaction_type': 'DICTATION',
-            #     'microphone_distance': 'NEARFIELD',
-            # },
-        },
-        'audio': {
-            'content': base64.b64encode(b''.join((struct.pack('B', len(x)) + x for x in chunks))).decode('utf-8'),
-        },
-    }
-    #old API_KEY version
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.SPEEX_WITH_HEADER_BYTE,
+        sample_rate_hertz=16000,
+        language_code=lang,
+        # Enable automatic punctuation
+        enable_automatic_punctuation=True,
+        max_alternatives=1
+    )
+
+    audio = {
+            'content': base64.b64encode(b''.join((struct.pack('B', len(x)) + x for x in chunks))).decode('utf-8')
+            }
+    
+    #old API_KEY method
     #result = requests.post(f'https://speech.googleapis.com/v1/speech:recognize?key={API_KEY}', json=body)
-    result = requests.post(f'https://speech.googleapis.com/v1/speech:recognize', json=body)
-    result.raise_for_status()
+    #result.raise_for_status()
+    #use speech library
+    client = speech.SpeechClient.from_service_account_json("/code/asr/key.json")
+    response = client.recognize(config=config, audio=audio)
+ 
 
     words = []
-    if 'results' in result.json():
-        for result in result.json()['results']:
+    #updated syntax
+    if 'results' in response:
+        for result in response.results:
             words.extend({
-                             'word': x,
-                             'confidence': str(result['alternatives'][0]['confidence']),
-                         } for x in result['alternatives'][0]['transcript'].split(' '))
+                    'word': x,
+                    'confidence': str(result.alternatives[0].confidence),
+                } for x in result.alternatives[0].transcript.split(' '))
 
     # Now for some reason we also need to give back a mime/multipart message...
     parts = MIMEMultipart()
