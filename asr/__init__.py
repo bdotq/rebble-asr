@@ -71,7 +71,10 @@ def recognise():
         language_code=lang,
         # Enable automatic punctuation
         enable_automatic_punctuation=True,
-        max_alternatives=1
+        max_alternatives=1,
+        model="latest_short",
+        enable_spoken_punctuation=True,
+        enable_spoken_emojis=True
     )
 
     audio = {
